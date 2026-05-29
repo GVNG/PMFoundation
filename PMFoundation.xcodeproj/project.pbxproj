@@ -15,6 +15,7 @@
 				937D3A712FB5EF6C00384D0F /* OpenSSL build */,
 				937D3A722FB5F54500384D0F /* CURL build */,
 				937D3A732FB5F90200384D0F /* OpenCV build */,
+				93FECA6F2FC98FD200D9A210 /* WatchOS */,
 				937D3A742FB60A1800384D0F /* Make framework */,
 				937D3A752FB61CC700384D0F /* Make ZIP */,
 			);
@@ -80,7 +81,7 @@
 		937D3A702FB5E79900384D0F /* Checkout */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
+			buildActionMask = 12;
 			files = (
 			);
 			inputFileListPaths = (
@@ -170,13 +171,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nOUT=\"${ROOT}/PMFoundation.xcframework\"\n\nrm -rf \"$OUT\"\n\nPLATFORMS=(\n  \"iphoneos\"\n  \"iphonesimulator\"\n  \"macos-arm64\"\n)\n\nCMD=(xcodebuild -create-xcframework)\n\nfor P in \"${PLATFORMS[@]}\"; do\n\n    DIR=\"$BUILD/$P\"\n\n    echo \"==============================\"\n    echo \"Platform: $P\"\n    echo \"==============================\"\n\n    LIBS=()\n\n    for f in \"$DIR/lib/\"*.a; do\n        [ -e \"$f\" ] || continue\n        LIBS+=(\"$f\")\n        echo \"  lib: $(basename \"$f\")\"\n    done\n\n    if [ ${#LIBS[@]} -eq 0 ]; then\n        echo \"Skip $P (no libs)\"\n        continue\n    fi\n\n    # output fat static lib\n    OUT_LIB=\"$DIR/libPMFoundation.a\"\n\n    echo \"Creating fat lib: $OUT_LIB\"\n\n    rm -f \"$OUT_LIB\"\n\n    libtool -static \\\n        -o \"$OUT_LIB\" \\\n        \"${LIBS[@]}\" \\\n        2> >(grep -v \"has no symbols\" >&2)\n    \n    # XCFramework input = single artifact per platform\n    CMD+=(\"-library\" \"$OUT_LIB\")\n    CMD+=(\"-headers\" \"$DIR/include\")\n\ndone\n\nCMD+=(\"-output\" \"$OUT\")\n\necho \"==============================\"\necho \"Creating XCFramework...\"\necho \"==============================\"\n\n\"${CMD[@]}\"\n\necho \"DONE → $OUT\"\n";
+			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nOUT=\"${ROOT}/PMFoundation.xcframework\"\n\nrm -rf \"$OUT\"\n\nPLATFORMS=(\n  \"iphoneos\"\n  \"iphonesimulator\"\n  \"macos-arm64\"\n  \"watchos\"\n  \"watchsimulator\"\n)\n\nCMD=(xcodebuild -create-xcframework)\n\nfor P in \"${PLATFORMS[@]}\"; do\n\n    DIR=\"$BUILD/$P\"\n    OUT_LIB=\"$DIR/libPMFoundation.a\"\n\n    echo \"==============================\"\n    echo \"Platform: $P\"\n    echo \"==============================\"\n\n    if [ -f \"$OUT_LIB\" ]; then\n\n        echo \"Using prebuilt lib: $OUT_LIB\"\n\n    else\n\n        LIBS=()\n\n        for f in \"$DIR/lib/\"*.a; do\n            [ -e \"$f\" ] || continue\n            LIBS+=(\"$f\")\n            echo \"  lib: $(basename \"$f\")\"\n        done\n\n        if [ ${#LIBS[@]} -eq 0 ]; then\n            echo \"Skip $P (no libs)\"\n            continue\n        fi\n\n        # output fat static lib\n\n        echo \"Creating fat lib: $OUT_LIB\"\n\n        rm -f \"$OUT_LIB\"\n\n        libtool -static \\\n            -o \"$OUT_LIB\" \\\n            \"${LIBS[@]}\" \\\n            2> >(grep -v \"has no symbols\" >&2)\n    fi\n    \n    # XCFramework input = single artifact per platform\n    CMD+=(\"-library\" \"$OUT_LIB\")\n    CMD+=(\"-headers\" \"$DIR/include\")\n\ndone\n\nCMD+=(\"-output\" \"$OUT\")\n\necho \"==============================\"\necho \"Creating XCFramework...\"\necho \"==============================\"\n\n\"${CMD[@]}\"\n\necho \"DONE → $OUT\"\n";
 			showEnvVarsInLog = 0;
 		};
 		937D3A752FB61CC700384D0F /* Make ZIP */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
+			buildActionMask = 12;
 			files = (
 			);
 			inputFileListPaths = (
@@ -192,6 +193,25 @@
 			shellPath = /bin/bash;
 			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nOUT_DIR=\"${ROOT}\"\n\nRESNAME=\"PMFoundation.xcframework\" \nFRAMEWORK=\"${OUT_DIR}/${RESNAME}\"\n\nZIP_FILE=\"${OUT_DIR}/${RESNAME}.zip\"\nSHA_FILE=\"${OUT_DIR}/${RESNAME}.zip.sha256\"\n\necho \"==============================\"\necho \"Packaging XCFramework\"\necho \"==============================\"\n\n# cleanup old artifacts\nrm -f \"$ZIP_FILE\" \"$SHA_FILE\"\n\n# sanity check\nif [ ! -d \"$FRAMEWORK\" ]; then\n    echo \"❌ XCFramework not found: $FRAMEWORK\"\n    exit 1\nfi\n\n# create zip (reproducible-ish)\necho \"Creating ZIP...\"\n/usr/bin/ditto -c -k --sequesterRsrc --keepParent \\\n    \"$FRAMEWORK\" \\\n    \"$ZIP_FILE\"\n\necho \"ZIP created: $ZIP_FILE\"\n\n# SHA256 checksum\ncd \"${OUT_DIR}\"\necho \"Generating SHA256...\"\nshasum -a 256 \"./${RESNAME}.zip\" > \"$SHA_FILE\"\n# rm -rf \"${FRAMEWORK}\"\n\necho \"==============================\"\necho \"DONE\"\necho \"ZIP:  $ZIP_FILE\"\necho \"SHA:  $SHA_FILE\"\necho \"==============================\"\n";
 			showEnvVarsInLog = 0;
+		};
+		93FECA6F2FC98FD200D9A210 /* WatchOS */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = WatchOS;
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nmkdir -p \"$BUILD/watchos/include\"\n\ncat > \"$BUILD/watchos/empty.c\" <<EOF\nvoid pmfoundation_watch_stub(void) {}\nEOF\n\nxcrun clang \\\n    -target arm64-apple-watchos \\\n    -c \"$BUILD/watchos/empty.c\" \\\n    -o \"$BUILD/watchos/empty.o\"\n\nlibtool -static \\\n    -o \"$BUILD/watchos/libPMFoundation.a\" \\\n    \"$BUILD/watchos/empty.o\"\n\nmkdir -p \"$BUILD/watchsimulator/include\"\n\nxcrun clang \\\n    -target arm64-apple-watchos-simulator \\\n    -c \"$BUILD/watchos/empty.c\" \\\n    -o \"$BUILD/watchsimulator/empty.o\"\n\nlibtool -static \\\n    -o \"$BUILD/watchsimulator/libPMFoundation.a\" \\\n    \"$BUILD/watchsimulator/empty.o\"\n    \n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
