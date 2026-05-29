@@ -99,7 +99,7 @@
 		937D3A712FB5EF6C00384D0F /* OpenSSL build */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 8;
+			buildActionMask = 12;
 			files = (
 			);
 			inputFileListPaths = (
@@ -111,7 +111,7 @@
 			);
 			outputPaths = (
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nSRC=\"${BUILD}/src\"\n\nOPENSSL_SRC=\"${SRC}/openssl\"\n\nDEPLOYMENT_TARGET=\"${IPHONEOS_DEPLOYMENT_TARGET:-17.8}\"\n\nmkdir -p \"$BUILD\"\n\nbuild_openssl() {\n\n    NAME=$1\n    SDK=$2\n    ARCHS=$3\n    CONFIGURE_TARGET=$4\n\n    PREFIX=\"${BUILD}/${NAME}\"\n\n    echo \"==============================\"\n    echo \"Building OpenSSL:\"\n    echo \"  NAME   = $NAME\"\n    echo \"  SDK    = $SDK\"\n    echo \"  ARCHS  = $ARCHS\"\n    echo \"  PREFIX = $PREFIX\"\n    echo \"==============================\"\n\n    SDK_PATH=\"$(xcrun --sdk \"$SDK\" --show-sdk-path)\"\n    CC=\"$(xcrun --sdk \"$SDK\" -f clang)\"\n\n    cd \"$OPENSSL_SRC\"\n\n    if [ -f Makefile ]; then\n        make clean\n    fi\n    \n    export CC\n    export CFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS}\"\n    export LDFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS}\"\n\n    ./Configure \"$CONFIGURE_TARGET\" \\\n        no-shared \\\n        no-dso \\\n        no-hw \\\n        no-engine \\\n        no-tests \\\n        no-apps \\\n        --prefix=\"$PREFIX\"\n\n    make -j$(sysctl -n hw.ncpu)\n\n    rm -rf \"$PREFIX\"\n\n    make install_sw\n}\n\n#\n# iOS device\n#\n\nbuild_openssl \\\n    \"iphoneos\" \\\n    \"iphoneos\" \\\n    \"-arch arm64 -miphoneos-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"ios64-cross\"\n\n#\n# iOS simulator\n#\n\nbuild_openssl \\\n    \"iphonesimulator\" \\\n    \"iphonesimulator\" \\\n    \"-arch arm64 -arch x86_64 -mios-simulator-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"iossimulator-xcrun\"\n\nbuild_openssl \\\n    \"macos-arm64\" \\\n    \"macosx\" \\\n    \"-arch arm64 -mmacosx-version-min=11.0\" \\\n    \"darwin64-arm64-cc\"\n\necho \"OpenSSL builds complete\"\n";
 		};
@@ -133,7 +133,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nSRC=\"${BUILD}/src\"\n\nCURL_SRC=\"${SRC}/curl\"\nDEPLOYMENT_TARGET=\"${IPHONEOS_DEPLOYMENT_TARGET:-17.8}\"\n\nbuild_curl() {\n\n    NAME=$1\n    SDK=$2\n    ARCHS=$3\n    HOST=$4\n\n    PREFIX=\"${BUILD}/${NAME}\"\n\n    echo \"==============================\"\n    echo \"Building curl:\"\n    echo \"  NAME   = $NAME\"\n    echo \"  SDK    = $SDK\"\n    echo \"  ARCHS  = $ARCHS\"\n    echo \"  PREFIX = $PREFIX\"\n    echo \"==============================\"\n\n    SDK_PATH=\"$(xcrun --sdk \"$SDK\" --show-sdk-path)\"\n\n    export CC=\"$(xcrun --sdk \"$SDK\" -f clang)\"\n\n    export CFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS}\"\n    export CPPFLAGS=\"-I${PREFIX}/include\"\n    export LDFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS} -L${PREFIX}/lib\"\n    export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\n\n    cd \"$CURL_SRC\"\n\n    make clean || true\n\n    autoreconf -fi\n\n    ac_cv_func_pipe2=no \\\n    ./configure \\\n        --host=\"$HOST\" \\\n        --with-openssl=\"$PREFIX\" \\\n        --without-libpsl \\\n        --enable-ntlm \\\n        --enable-static \\\n        --disable-shared \\\n        --disable-ldap \\\n        --disable-ldaps \\\n        --disable-rtsp \\\n        --disable-dict \\\n        --disable-telnet \\\n        --disable-tftp \\\n        --disable-pop3 \\\n        --disable-imap \\\n        --disable-smb \\\n        --disable-smtp \\\n        --disable-gopher \\\n        --disable-manual \\\n        --prefix=\"$PREFIX\"\n\n    make -j$(sysctl -n hw.ncpu)\n    make install\n}\n\n#\n# iPhoneOS\n#\n\nbuild_curl \\\n    \"iphoneos\" \\\n    \"iphoneos\" \\\n    \"-arch arm64 -miphoneos-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"arm-apple-darwin\"\n\n#\n# iPhone Simulator\n#\n\nbuild_curl \\\n    \"iphonesimulator\" \\\n    \"iphonesimulator\" \\\n    \"-arch arm64 -arch x86_64 -mios-simulator-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"arm-apple-darwin\"\n\n#\n# macOS arm64\n#\n\nbuild_curl \\\n    \"macos-arm64\" \\\n    \"macosx\" \\\n    \"-arch arm64 -mmacosx-version-min=11.0\" \\\n    \"arm-apple-darwin\"\n\necho \"curl builds complete\"\n";
-			showEnvVarsInLog = 0;
 		};
 		937D3A732FB5F90200384D0F /* OpenCV build */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -191,7 +190,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/bash;
-			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nOUT_DIR=\"${ROOT}\"\n\nRESNAME=\"PMFoundation.xcframework\" \nFRAMEWORK=\"${OUT_DIR}/${RESNAME}\"\n\nZIP_FILE=\"${OUT_DIR}/${RESNAME}.zip\"\nSHA_FILE=\"${OUT_DIR}/${RESNAME}.zip.sha256\"\n\necho \"==============================\"\necho \"Packaging XCFramework\"\necho \"==============================\"\n\n# cleanup old artifacts\nrm -f \"$ZIP_FILE\" \"$SHA_FILE\"\n\n# sanity check\nif [ ! -d \"$FRAMEWORK\" ]; then\n    echo \"❌ XCFramework not found: $FRAMEWORK\"\n    exit 1\nfi\n\n# create zip (reproducible-ish)\necho \"Creating ZIP...\"\n/usr/bin/ditto -c -k --sequesterRsrc --keepParent \\\n    \"$FRAMEWORK\" \\\n    \"$ZIP_FILE\"\n\necho \"ZIP created: $ZIP_FILE\"\n\n# SHA256 checksum\ncd \"${OUT_DIR}\"\necho \"Generating SHA256...\"\nshasum -a 256 \"./${RESNAME}.zip\" > \"$SHA_FILE\"\nrm -rf \"${FRAMEWORK}\"\n\necho \"==============================\"\necho \"DONE\"\necho \"ZIP:  $ZIP_FILE\"\necho \"SHA:  $SHA_FILE\"\necho \"==============================\"\n";
+			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nOUT_DIR=\"${ROOT}\"\n\nRESNAME=\"PMFoundation.xcframework\" \nFRAMEWORK=\"${OUT_DIR}/${RESNAME}\"\n\nZIP_FILE=\"${OUT_DIR}/${RESNAME}.zip\"\nSHA_FILE=\"${OUT_DIR}/${RESNAME}.zip.sha256\"\n\necho \"==============================\"\necho \"Packaging XCFramework\"\necho \"==============================\"\n\n# cleanup old artifacts\nrm -f \"$ZIP_FILE\" \"$SHA_FILE\"\n\n# sanity check\nif [ ! -d \"$FRAMEWORK\" ]; then\n    echo \"❌ XCFramework not found: $FRAMEWORK\"\n    exit 1\nfi\n\n# create zip (reproducible-ish)\necho \"Creating ZIP...\"\n/usr/bin/ditto -c -k --sequesterRsrc --keepParent \\\n    \"$FRAMEWORK\" \\\n    \"$ZIP_FILE\"\n\necho \"ZIP created: $ZIP_FILE\"\n\n# SHA256 checksum\ncd \"${OUT_DIR}\"\necho \"Generating SHA256...\"\nshasum -a 256 \"./${RESNAME}.zip\" > \"$SHA_FILE\"\n# rm -rf \"${FRAMEWORK}\"\n\necho \"==============================\"\necho \"DONE\"\necho \"ZIP:  $ZIP_FILE\"\necho \"SHA:  $SHA_FILE\"\necho \"==============================\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */
