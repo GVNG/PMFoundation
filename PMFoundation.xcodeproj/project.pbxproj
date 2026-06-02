@@ -100,7 +100,7 @@
 		937D3A712FB5EF6C00384D0F /* OpenSSL build */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 8;
+			buildActionMask = 12;
 			files = (
 			);
 			inputFileListPaths = (
@@ -112,14 +112,14 @@
 			);
 			outputPaths = (
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nSRC=\"${BUILD}/src\"\n\nOPENSSL_SRC=\"${SRC}/openssl\"\n\nDEPLOYMENT_TARGET=\"${IPHONEOS_DEPLOYMENT_TARGET:-17.8}\"\n\nmkdir -p \"$BUILD\"\n\nbuild_openssl() {\n\n    NAME=$1\n    SDK=$2\n    ARCHS=$3\n    CONFIGURE_TARGET=$4\n\n    PREFIX=\"${BUILD}/${NAME}\"\n\n    echo \"==============================\"\n    echo \"Building OpenSSL:\"\n    echo \"  NAME   = $NAME\"\n    echo \"  SDK    = $SDK\"\n    echo \"  ARCHS  = $ARCHS\"\n    echo \"  PREFIX = $PREFIX\"\n    echo \"==============================\"\n\n    SDK_PATH=\"$(xcrun --sdk \"$SDK\" --show-sdk-path)\"\n    CC=\"$(xcrun --sdk \"$SDK\" -f clang)\"\n\n    cd \"$OPENSSL_SRC\"\n\n    if [ -f Makefile ]; then\n        make clean\n    fi\n    \n    export CC\n    export CFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS}\"\n    export LDFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS}\"\n\n    ./Configure \"$CONFIGURE_TARGET\" \\\n        no-shared \\\n        no-dso \\\n        no-hw \\\n        no-engine \\\n        no-tests \\\n        no-apps \\\n        --prefix=\"$PREFIX\"\n\n    make -j$(sysctl -n hw.ncpu)\n\n    rm -rf \"$PREFIX\"\n\n    make install_sw\n}\n\n#\n# iOS device\n#\n\nbuild_openssl \\\n    \"iphoneos\" \\\n    \"iphoneos\" \\\n    \"-arch arm64 -miphoneos-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"ios64-cross\"\n\n#\n# iOS simulator\n#\n\nbuild_openssl \\\n    \"iphonesimulator\" \\\n    \"iphonesimulator\" \\\n    \"-arch arm64 -arch x86_64 -mios-simulator-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"iossimulator-xcrun\"\n\nbuild_openssl \\\n    \"macos-arm64\" \\\n    \"macosx\" \\\n    \"-arch arm64 -mmacosx-version-min=11.0\" \\\n    \"darwin64-arm64-cc\"\n\nbuild_openssl \\\n    \"macos-x86_64\" \\\n    \"macosx\" \\\n    \"-arch x86_64 -mmacosx-version-min=11.0\" \\\n    \"darwin64-x86_64-cc\"\n\necho \"OpenSSL builds complete\"\n";
 		};
 		937D3A722FB5F54500384D0F /* CURL build */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 8;
+			buildActionMask = 12;
 			files = (
 			);
 			inputFileListPaths = (
@@ -131,14 +131,14 @@
 			);
 			outputPaths = (
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nSRC=\"${BUILD}/src\"\n\nCURL_SRC=\"${SRC}/curl\"\nDEPLOYMENT_TARGET=\"${IPHONEOS_DEPLOYMENT_TARGET:-17.8}\"\n\nbuild_curl() {\n\n    NAME=$1\n    SDK=$2\n    ARCHS=$3\n    HOST=$4\n\n    PREFIX=\"${BUILD}/${NAME}\"\n\n    echo \"==============================\"\n    echo \"Building curl:\"\n    echo \"  NAME   = $NAME\"\n    echo \"  SDK    = $SDK\"\n    echo \"  ARCHS  = $ARCHS\"\n    echo \"  PREFIX = $PREFIX\"\n    echo \"==============================\"\n\n    SDK_PATH=\"$(xcrun --sdk \"$SDK\" --show-sdk-path)\"\n\n    export CC=\"$(xcrun --sdk \"$SDK\" -f clang)\"\n\n    export CFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS}\"\n    export CPPFLAGS=\"-I${PREFIX}/include\"\n    export LDFLAGS=\"-isysroot ${SDK_PATH} ${ARCHS} -L${PREFIX}/lib\"\n    export PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\n\n    cd \"$CURL_SRC\"\n\n    make clean || true\n\n    autoreconf -fi\n\n    ac_cv_func_pipe2=no \\\n    ./configure \\\n        --host=\"$HOST\" \\\n        --with-openssl=\"$PREFIX\" \\\n        --without-libpsl \\\n        --enable-ntlm \\\n        --enable-static \\\n        --disable-shared \\\n        --disable-ldap \\\n        --disable-ldaps \\\n        --disable-rtsp \\\n        --disable-dict \\\n        --disable-telnet \\\n        --disable-tftp \\\n        --disable-pop3 \\\n        --disable-imap \\\n        --disable-smb \\\n        --disable-smtp \\\n        --disable-gopher \\\n        --disable-manual \\\n        --prefix=\"$PREFIX\"\n\n    make -j$(sysctl -n hw.ncpu)\n    make install\n}\n\n#\n# iPhoneOS\n#\n\nbuild_curl \\\n    \"iphoneos\" \\\n    \"iphoneos\" \\\n    \"-arch arm64 -miphoneos-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"arm-apple-darwin\"\n\n#\n# iPhone Simulator\n#\n\nbuild_curl \\\n    \"iphonesimulator\" \\\n    \"iphonesimulator\" \\\n    \"-arch arm64 -arch x86_64 -mios-simulator-version-min=${DEPLOYMENT_TARGET}\" \\\n    \"arm-apple-darwin\"\n\n#\n# macOS arm64\n#\n\nbuild_curl \\\n    \"macos-arm64\" \\\n    \"macosx\" \\\n    \"-arch arm64 -mmacosx-version-min=11.0\" \\\n    \"arm-apple-darwin\"\n\nbuild_curl \\\n    \"macos-x86_64\" \\\n    \"macosx\" \\\n    \"-arch x86_64 -mmacosx-version-min=11.0\" \\\n    \"x86_64-apple-darwin\"\n\necho \"curl builds complete\"\n";
 		};
 		937D3A732FB5F90200384D0F /* OpenCV build */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
-			buildActionMask = 8;
+			buildActionMask = 12;
 			files = (
 			);
 			inputFileListPaths = (
@@ -150,7 +150,7 @@
 			);
 			outputPaths = (
 			);
-			runOnlyForDeploymentPostprocessing = 1;
+			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "set -euo pipefail\n\nROOT=\"${SRCROOT}\"\nBUILD=\"${ROOT}/build\"\nSRC=\"${BUILD}/src\"\n\nOPENCV_SRC=\"${SRC}/opencv\"\n\nIOS_MIN=\"17.8\"\nMACOS_MIN=\"11.0\"\n\nexport PATH=\"/opt/homebrew/bin:/usr/local/bin:$PATH\"\n\nbuild_opencv() {\n\n    NAME=$1\n    SDK=$2\n    ARCHS=$3\n    MIN_VERSION=$4\n\n    PREFIX=\"${BUILD}/${NAME}\"\n    BUILD_DIR=\"${BUILD}/opencv-build-${NAME}\"\n\n    echo \"==============================\"\n    echo \"Building OpenCV:\"\n    echo \"  NAME   = $NAME\"\n    echo \"  SDK    = $SDK\"\n    echo \"  ARCHS  = $ARCHS\"\n    echo \"  MINVER = $MIN_VERSION\"\n    echo \"==============================\"\n\n    SDK_PATH=\"$(xcrun --sdk \"$SDK\" --show-sdk-path)\"\n\n    rm -rf \"$BUILD_DIR\"\n    mkdir -p \"$BUILD_DIR\"\n    cd \"$BUILD_DIR\"\n\n    cmake \"$OPENCV_SRC\" \\\n        -DCMAKE_BUILD_TYPE=Release \\\n        -DCMAKE_INSTALL_PREFIX=\"$PREFIX\" \\\n        -DCMAKE_SYSTEM_NAME=Darwin \\\n        -DCMAKE_OSX_SYSROOT=\"$SDK_PATH\" \\\n        -DCMAKE_OSX_ARCHITECTURES=\"$ARCHS\" \\\n        -DCMAKE_OSX_DEPLOYMENT_TARGET=\"$MIN_VERSION\" \\\n        -DBUILD_SHARED_LIBS=OFF \\\n        -DBUILD_TESTS=OFF \\\n        -DBUILD_PERF_TESTS=OFF \\\n        -DBUILD_EXAMPLES=OFF \\\n        -DBUILD_opencv_apps=OFF \\\n        -DBUILD_JAVA=OFF \\\n        -DBUILD_OBJC=OFF \\\n        -DBUILD_opencv_python=OFF \\\n        -DBUILD_opencv_dnn=OFF \\\n        -DBUILD_opencv_ml=OFF \\\n        -DBUILD_opencv_gapi=OFF \\\n        -DBUILD_opencv_imgcodecs=OFF \\\n        -DWITH_IPP=OFF \\\n        -DWITH_TBB=OFF \\\n        -DWITH_OPENMP=OFF \\\n        -DWITH_CUDA=OFF \\\n        -DWITH_FFMPEG=OFF \\\n        -DWITH_GSTREAMER=OFF \\\n        -DWITH_1394=OFF \\\n        -DWITH_WEBP=OFF \\\n        -DWITH_OPENEXR=OFF \\\n        -DWITH_JPEG=OFF \\\n        -DWITH_PNG=OFF \\\n        -DWITH_TIFF=OFF \\\n        -DWITH_JASPER=OFF \\\n        -DWITH_GIF=OFF \\\n        -DWITH_IMGCODEC_HDR=OFF \\\n        -DWITH_IMGCODEC_PXM=OFF \\\n        -DWITH_IMGCODEC_SUNRASTER=OFF \\\n        -DWITH_PROTOBUF=OFF \\\n        -DWITH_OPENCL=OFF \\\n        -DWITH_OPENCL_SVM=OFF \\\n        -DWITH_OPENCL_D3D11_NV=OFF \\\n        -DWITH_VULKAN=OFF \\\n        -DWITH_METAL=OFF\n\n    cmake --build . --config Release -j$(sysctl -n hw.ncpu)\n\n    cmake --install .\n    rm -rf \"$BUILD_DIR\"\n    \n    cd \"$PREFIX/include\"\n\n    if [ -d \"opencv4\" ]; then\n        cp -R opencv4/opencv2 .\n        rm -rf opencv4\n    fi\n}\n\n#\n# iPhoneOS\n#\n\nbuild_opencv \\\n    \"iphoneos\" \\\n    \"iphoneos\" \\\n    \"arm64\" \\\n    \"$IOS_MIN\"\n\n#\n# iPhone Simulator\n#\n\nbuild_opencv \\\n    \"iphonesimulator\" \\\n    \"iphonesimulator\" \\\n    \"arm64;x86_64\" \\\n    \"$IOS_MIN\"\n\n#\n# macOS arm64\n#\n\nbuild_opencv \\\n    \"macos-arm64\" \\\n    \"macosx\" \\\n    \"arm64;x86_64\" \\\n    \"$MACOS_MIN\"\n\necho \"OpenCV build complete\"\n";
 		};
